@@ -14,4 +14,4 @@ pip install sam-io
 
 ## License
 
-This project is licensed under the [MIT License](https://raw.githubusercontent.com/EBI-Metagenomics/fasta-reader-py/master/LICENSE.md).
+This project is licensed under the [MIT License](https://raw.githubusercontent.com/EBI-Metagenomics/sam-io/master/LICENSE.md).
