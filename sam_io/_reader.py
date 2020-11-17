@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import TypeVar, Type
+import dataclasses
 from pathlib import Path
-from typing import IO, Iterator, List, Union
+from typing import IO, Iterator, List, Union, Optional, Dict
 
 from more_itertools import peekable
 from xopen import xopen
@@ -37,75 +38,50 @@ class ParsingError(Exception):
         return self._line_number
 
 
-@dataclass
+@dataclasses.dataclass
+class SAMHeader:
+    """
+    SAM header.
+
+    Attributes
+    ----------
+    hd
+        File-level metadata. Optional. If present, there must be only one
+        @HD line and it must be the first line of the file.
+    sq
+        Reference sequence dictionary. The order of @SQ lines defines the
+        alignment sorting order.
+    rg
+        Read group. Unordered multiple @RG lines are allowed.
+    """
+
+    hd: Optional[SAMHD] = None
+    sq: List[SAMSQ] = dataclasses.field(default_factory=lambda: [])
+    rg: List[str] = dataclasses.field(default_factory=lambda: [])
+
+
+@dataclasses.dataclass
 class SAMItem:
     """
     SAM item.
 
     Attributes
     ----------
-    defline
-        Description line.
-    sequence
-        Sequence.
+    qname
+        Query template NAME.
     """
 
-    defline: str
-    sequence: str
-
-    @property
-    def id(self) -> str:
-        """
-        Identification.
-
-        Returns
-        -------
-        Identification.
-        """
-        return self.defline.split()[0]
-
-    @id.setter
-    def id(self, val: str):
-        if self.has_desc:
-            self.defline = val + " " + self.desc
-        else:
-            self.defline = val
-
-    @property
-    def has_desc(self) -> bool:
-        """
-        Does it has description?
-
-        Returns
-        -------
-        ``True`` if it does contain description; ``False`` otherwise.
-        """
-        return len(self.defline.split()) > 1
-
-    @property
-    def desc(self) -> str:
-        """
-        Description (if any).
-
-        It will raise `RuntimeError` if it has no description.
-
-        Returns
-        -------
-        Description.
-
-        Raises
-        ------
-        RuntimeError
-            If it has no description.
-        """
-        if not self.has_desc:
-            raise RuntimeError("It does not have a description.")
-        tgt_id = self.id
-        return self.defline[len(tgt_id) + 1 :]
-
-    def __iter__(self):
-        yield self.defline
-        yield self.sequence
+    qname: str
+    flag: str
+    rname: str
+    pos: str
+    mapq: str
+    cigar: str
+    rnext: str
+    pnext: str
+    tlen: str
+    seq: str
+    qual: str
 
     def copy(self) -> SAMItem:
         """
@@ -118,6 +94,53 @@ class SAMItem:
         from copy import copy
 
         return copy(self)
+
+
+@dataclasses.dataclass
+class SAMHD:
+    vn: str
+    so: Optional[str] = None
+
+    @classmethod
+    def parse(cls: Type[SAMHD], line: str) -> SAMHD:
+        hd = cls(vn="")
+        fields = line.strip().split("\t")
+
+        assert fields[0] == "@HD"
+
+        for f in fields[1:]:
+            key, val = f.split(":")
+            if key == "VN":
+                hd.vn = val
+            elif key == "SO":
+                hd.so = val
+
+        assert hd.vn != ""
+        return hd
+
+
+@dataclasses.dataclass
+class SAMSQ:
+    sn: str
+    ln: str
+
+    @classmethod
+    def parse(cls: Type[SAMSQ], line: str) -> SAMSQ:
+        sq = cls("", "")
+        fields = line.strip().split("\t")
+
+        assert fields[0] == "@SQ"
+
+        for f in fields[1:]:
+            key, val = f.split(":")
+            if key == "SN":
+                sq.sn = val
+            elif key == "LN":
+                sq.ln = val
+
+        assert sq.sn != ""
+        assert sq.ln != ""
+        return sq
 
 
 class SAMReader:
@@ -141,6 +164,19 @@ class SAMReader:
         self._file = file
         self._lines = peekable(line for line in file)
         self._line_number = 0
+
+        next_line: str = self._lines.peek()
+        self._header = SAMHeader()
+        while next_line.startswith("@"):
+
+            line = self._next_line()
+
+            if line.startswith("@HD\t"):
+                self._header.hd = SAMHD.parse(line)
+            elif line.startswith("@SQ\t"):
+                self._header.sq.append(SAMSQ.parse(line))
+
+            next_line = self._lines.peek()
 
     def read_item(self) -> SAMItem:
         """
@@ -172,7 +208,7 @@ class SAMReader:
 
     def _next_defline(self) -> str:
         while True:
-            line = next(self._lines)
+            line = self._next_line()
             self._line_number += 1
             if line == "":
                 raise StopIteration
@@ -186,8 +222,7 @@ class SAMReader:
     def _next_sequence(self) -> str:
         lines = []
         while True:
-            line = next(self._lines)
-            self._line_number += 1
+            line = self._next_line()
             if line == "":
                 raise ParsingError(self._line_number)
 
@@ -211,6 +246,11 @@ class SAMReader:
         next_line = next_line.strip()
         return len(next_line) > 0 and not next_line.startswith(">")
 
+    def _next_line(self) -> str:
+        line = next(self._lines)
+        self._line_number += 1
+        return line
+
     def __iter__(self) -> Iterator[SAMItem]:
         while True:
             try:
@@ -226,6 +266,9 @@ class SAMReader:
         del exception_value
         del traceback
         self.close()
+
+    def __str__(self) -> str:
+        return str(self._header)
 
 
 def read_sam(file: Union[str, Path, IO[str]]) -> SAMReader:
