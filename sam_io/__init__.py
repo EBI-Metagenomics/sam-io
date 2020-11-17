@@ -1,13 +1,13 @@
-from ._reader import ParsingError, SAMItem, SAMReader, read_sam
+from ._reader import SAMHD, SAMSQ, ParsingError, SAMHeader, SAMItem, SAMReader, read_sam
 from ._version import __version__
-from ._writer import SAMWriter, write_sam
 
 __all__ = [
+    "ParsingError",
+    "SAMHD",
+    "SAMHeader",
     "SAMItem",
     "SAMReader",
-    "SAMWriter",
-    "ParsingError",
+    "SAMSQ",
     "__version__",
     "read_sam",
-    "write_sam",
 ]

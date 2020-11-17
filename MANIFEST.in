@@ -1,3 +1,4 @@
 include LICENSE.md
 include README.md
+include sam_io/test/examples.tar.gz
 include version.py

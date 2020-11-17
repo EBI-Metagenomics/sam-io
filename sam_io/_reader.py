@@ -1,14 +1,21 @@
 from __future__ import annotations
 
-from typing import TypeVar, Type
 import dataclasses
 from pathlib import Path
-from typing import IO, Iterator, List, Union, Optional, Dict
+from typing import IO, Iterator, List, Optional, Type, Union
 
 from more_itertools import peekable
 from xopen import xopen
 
-__all__ = ["ParsingError", "SAMItem", "SAMReader", "read_sam"]
+__all__ = [
+    "ParsingError",
+    "SAMHD",
+    "SAMHeader",
+    "SAMItem",
+    "SAMReader",
+    "SAMSQ",
+    "read_sam",
+]
 
 
 class ParsingError(Exception):
@@ -82,6 +89,14 @@ class SAMItem:
     tlen: str
     seq: str
     qual: str
+    remain: List[str]
+
+    @classmethod
+    def parse(cls: Type[SAMItem], line: str) -> SAMItem:
+        values = line.strip().split("\t")
+        args = tuple(values[:11]) + (values[11:],)
+        item = cls(*args)
+        return item
 
     def copy(self) -> SAMItem:
         """
@@ -186,9 +201,8 @@ class SAMReader:
         -------
         Next item.
         """
-        defline = self._next_defline()
-        sequence = self._next_sequence()
-        return SAMItem(defline, sequence)
+        line = self._next_line()
+        return SAMItem.parse(line)
 
     def read_items(self) -> List[SAMItem]:
         """
@@ -205,6 +219,17 @@ class SAMReader:
         Close the associated stream.
         """
         self._file.close()
+
+    @property
+    def header(self) -> SAMHeader:
+        """
+        File header.
+
+        Returns
+        -------
+        Header.
+        """
+        return self._header
 
     def _next_defline(self) -> str:
         while True:
