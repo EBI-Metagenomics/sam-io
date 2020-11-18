@@ -92,10 +92,14 @@ class SAMItem:
     remain: List[str]
 
     @classmethod
-    def parse(cls: Type[SAMItem], line: str) -> SAMItem:
+    def parse(cls: Type[SAMItem], line: str, line_number: int) -> SAMItem:
         values = line.strip().split("\t")
-        args = tuple(values[:11]) + (values[11:],)
-        item = cls(*args)
+        try:
+            args = tuple(values[:11]) + (values[11:],)
+            item = cls(*args)
+        except Exception:
+            raise ParsingError(line_number)
+
         return item
 
     def copy(self) -> SAMItem:
@@ -117,20 +121,24 @@ class SAMHD:
     so: Optional[str] = None
 
     @classmethod
-    def parse(cls: Type[SAMHD], line: str) -> SAMHD:
+    def parse(cls: Type[SAMHD], line: str, line_number: int) -> SAMHD:
         hd = cls(vn="")
         fields = line.strip().split("\t")
 
-        assert fields[0] == "@HD"
+        try:
+            assert fields[0] == "@HD"
 
-        for f in fields[1:]:
-            key, val = f.split(":")
-            if key == "VN":
-                hd.vn = val
-            elif key == "SO":
-                hd.so = val
+            for f in fields[1:]:
+                key, val = f.split(":")
+                if key == "VN":
+                    hd.vn = val
+                elif key == "SO":
+                    hd.so = val
 
-        assert hd.vn != ""
+            assert hd.vn != ""
+        except Exception:
+            raise ParsingError(line_number)
+
         return hd
 
 
@@ -140,21 +148,25 @@ class SAMSQ:
     ln: str
 
     @classmethod
-    def parse(cls: Type[SAMSQ], line: str) -> SAMSQ:
+    def parse(cls: Type[SAMSQ], line: str, line_number: int) -> SAMSQ:
         sq = cls("", "")
         fields = line.strip().split("\t")
 
         assert fields[0] == "@SQ"
 
-        for f in fields[1:]:
-            key, val = f.split(":")
-            if key == "SN":
-                sq.sn = val
-            elif key == "LN":
-                sq.ln = val
+        try:
+            for f in fields[1:]:
+                key, val = f.split(":")
+                if key == "SN":
+                    sq.sn = val
+                elif key == "LN":
+                    sq.ln = val
 
-        assert sq.sn != ""
-        assert sq.ln != ""
+            assert sq.sn != ""
+            assert sq.ln != ""
+        except Exception:
+            raise ParsingError(line_number)
+
         return sq
 
 
@@ -180,18 +192,25 @@ class SAMReader:
         self._lines = peekable(line for line in file)
         self._line_number = 0
 
-        next_line: str = self._lines.peek()
         self._header = SAMHeader()
+        try:
+            next_line: str = self._lines.peek()
+        except StopIteration:
+            return
+
         while next_line.startswith("@"):
 
             line = self._next_line()
 
-            if line.startswith("@HD\t"):
-                self._header.hd = SAMHD.parse(line)
-            elif line.startswith("@SQ\t"):
-                self._header.sq.append(SAMSQ.parse(line))
+            if line.startswith("@HD"):
+                self._header.hd = SAMHD.parse(line, self._line_number)
+            elif line.startswith("@SQ"):
+                self._header.sq.append(SAMSQ.parse(line, self._line_number))
 
-            next_line = self._lines.peek()
+            try:
+                next_line = self._lines.peek()
+            except StopIteration:
+                break
 
     def read_item(self) -> SAMItem:
         """
@@ -202,7 +221,7 @@ class SAMReader:
         Next item.
         """
         line = self._next_line()
-        return SAMItem.parse(line)
+        return SAMItem.parse(line, self._line_number)
 
     def read_items(self) -> List[SAMItem]:
         """
@@ -231,45 +250,32 @@ class SAMReader:
         """
         return self._header
 
-    def _next_defline(self) -> str:
-        while True:
-            line = self._next_line()
-            self._line_number += 1
-            if line == "":
-                raise StopIteration
+    # def _next_sequence(self) -> str:
+    #     lines = []
+    #     while True:
+    #         line = self._next_line()
+    #         if line == "":
+    #             raise ParsingError(self._line_number)
 
-            line = line.strip()
-            if line.startswith(">"):
-                return line[1:]
-            if line != "":
-                raise ParsingError(self._line_number)
+    #         line = line.strip()
+    #         if not line.startswith(">"):
+    #             lines.append(line)
+    #             if self._sequence_continues():
+    #                 continue
+    #             return "".join(lines)
+    #         if line != "":
+    #             raise ParsingError(self._line_number)
 
-    def _next_sequence(self) -> str:
-        lines = []
-        while True:
-            line = self._next_line()
-            if line == "":
-                raise ParsingError(self._line_number)
+    # def _sequence_continues(self):
+    #     try:
+    #         next_line = self._lines.peek()
+    #     except StopIteration:
+    #         return False
 
-            line = line.strip()
-            if not line.startswith(">"):
-                lines.append(line)
-                if self._sequence_continues():
-                    continue
-                return "".join(lines)
-            if line != "":
-                raise ParsingError(self._line_number)
-
-    def _sequence_continues(self):
-        try:
-            next_line = self._lines.peek()
-        except StopIteration:
-            return False
-
-        if next_line == "":
-            return False
-        next_line = next_line.strip()
-        return len(next_line) > 0 and not next_line.startswith(">")
+    #     if next_line == "":
+    #         return False
+    #     next_line = next_line.strip()
+    #     return len(next_line) > 0 and not next_line.startswith(">")
 
     def _next_line(self) -> str:
         line = next(self._lines)
