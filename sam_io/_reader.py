@@ -250,33 +250,6 @@ class SAMReader:
         """
         return self._header
 
-    # def _next_sequence(self) -> str:
-    #     lines = []
-    #     while True:
-    #         line = self._next_line()
-    #         if line == "":
-    #             raise ParsingError(self._line_number)
-
-    #         line = line.strip()
-    #         if not line.startswith(">"):
-    #             lines.append(line)
-    #             if self._sequence_continues():
-    #                 continue
-    #             return "".join(lines)
-    #         if line != "":
-    #             raise ParsingError(self._line_number)
-
-    # def _sequence_continues(self):
-    #     try:
-    #         next_line = self._lines.peek()
-    #     except StopIteration:
-    #         return False
-
-    #     if next_line == "":
-    #         return False
-    #     next_line = next_line.strip()
-    #     return len(next_line) > 0 and not next_line.startswith(">")
-
     def _next_line(self) -> str:
         line = next(self._lines)
         self._line_number += 1
