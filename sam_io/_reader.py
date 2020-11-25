@@ -75,7 +75,40 @@ class SAMItem:
     Attributes
     ----------
     qname
-        Query template NAME.
+        Query template NAME. Reads/segments having identical QNAME are regarded to come
+        from the same template. A QNAME `*` indicates the information is unavailable.
+    flag
+        Combination of bitwise FLAGs.
+    rname
+        Reference sequence name of the alignment.
+    pos
+        1-based leftmost mapping position of the first CIGAR operation that "consumes" a
+        reference base.
+    mapq
+        Mapping quality. It equals `−10 log10 Pr{mapping position is wrong}`, rounded to
+        the nearest integer. A value 255 indicates that the mapping quality is not
+        available.
+    cigar
+        CIGAR string.
+    rnext
+        Reference sequence name of the primary alignment of the next read in the
+        template.
+    pnext
+        1-based position of the primary alignment of the next read in the template. Set
+        as 0 when the information is unavailable.
+    tlen
+        Signed observed template length.
+    seq
+        Segment sequence. This field can be a `*` when the sequence is not stored.
+    qual
+        ASCII of base quality plus 33 (same as the quality string in the Sanger FASTQ
+        format).
+    remain
+        Remaning fields not defined by SAM format.
+
+    References
+    ----------
+    .. [SAMv1] https://samtools.github.io/hts-specs/SAMv1.pdf
     """
 
     qname: str
