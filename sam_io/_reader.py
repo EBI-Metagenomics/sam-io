@@ -9,6 +9,7 @@ from xopen import xopen
 
 __all__ = [
     "ParsingError",
+    "SAMFlag",
     "SAMHD",
     "SAMHeader",
     "SAMItem",
@@ -67,6 +68,66 @@ class SAMHeader:
     rg: List[str] = dataclasses.field(default_factory=lambda: [])
 
 
+class SAMFlag:
+    """
+    Bitwise flags.
+    """
+
+    def __init__(self, flag: int):
+        self._flag = flag
+
+    @property
+    def read_paired(self) -> bool:
+        return self._flag & 0x001 != 0
+
+    @property
+    def read_mapped_in_proper_pair(self) -> bool:
+        return self._flag & 0x002 != 0
+
+    @property
+    def read_unmapped(self) -> bool:
+        return self._flag & 0x004 != 0
+
+    @property
+    def mate_unmapped(self) -> bool:
+        return self._flag & 0x008 != 0
+
+    @property
+    def read_reverse_strand(self) -> bool:
+        return self._flag & 0x010 != 0
+
+    @property
+    def mate_reverse_strand(self) -> bool:
+        return self._flag & 0x020 != 0
+
+    @property
+    def first_in_pair(self) -> bool:
+        return self._flag & 0x040 != 0
+
+    @property
+    def second_in_pair(self) -> bool:
+        return self._flag & 0x080 != 0
+
+    @property
+    def secondary_alignment(self) -> bool:
+        return self._flag & 0x100 != 0
+
+    @property
+    def read_fails_filters(self) -> bool:
+        return self._flag & 0x200 != 0
+
+    @property
+    def read_is_pcr_or_optical_duplicate(self) -> bool:
+        return self._flag & 0x400 != 0
+
+    @property
+    def supplementary_alignment(self) -> bool:
+        return self._flag & 0x800 != 0
+
+    def __str__(self):
+        return str(self._flag)
+
+
 @dataclasses.dataclass
 class SAMItem:
     """
@@ -112,9 +173,9 @@ class SAMItem:
     """
 
     qname: str
-    flag: str
+    flag: SAMFlag
     rname: str
-    pos: str
+    pos: int
     mapq: str
     cigar: str
     rnext: str
@@ -128,8 +189,20 @@ class SAMItem:
     def parse(cls: Type[SAMItem], line: str, line_number: int) -> SAMItem:
         values = line.strip().split("\t")
         try:
-            args = tuple(values[:11]) + (values[11:],)
-            item = cls(*args)
+            item = cls(
+                values[0],
+                SAMFlag(int(values[1])),
+                values[2],
+                int(values[3]),
+                values[4],
+                values[5],
+                values[6],
+                values[7],
+                values[8],
+                values[9],
+                values[10],
+                values[11:],
+            )
         except Exception:
             raise ParsingError(line_number)
 

@@ -24,9 +24,9 @@ def test_read_example1(data_dir: Path):
 
         item = file.read_item()
         assert item.qname == "0b3cc96a-72f6-4d1e-a4ab-a43fa4993d34"
-        assert item.flag == "0"
+        assert str(item.flag) == "0"
         assert item.rname == "2"
-        assert item.pos == "1056"
+        assert item.pos == 1056
         assert item.mapq == "60"
         assert item.cigar[:5] == "50M1D"
         assert item.cigar[-5:] == "1I38M"
@@ -44,7 +44,7 @@ def test_read_example1(data_dir: Path):
         item = file.read_item()
 
         assert item.qname == "1b1b14f0-3bc2-465c-8259-053924e5cbb1"
-        assert item.flag == "2064"
+        assert str(item.flag) == "2064"
         assert item.seq[-5:] == "TCTGA"
 
         with pytest.raises(StopIteration):
@@ -64,9 +64,9 @@ def test_read_example2(data_dir: Path):
     assert len(items) == 7
 
     assert items[0].qname == "0b3cc96a-72f6-4d1e-a4ab-a43fa4993d34"
-    assert items[0].flag == "0"
+    assert str(items[0].flag) == "0"
     assert items[0].rname == "2"
-    assert items[0].pos == "1056"
+    assert items[0].pos == 1056
     assert items[0].mapq == "60"
     assert items[0].cigar[:5] == "50M1D"
     assert items[0].cigar[-5:] == "1I38M"
@@ -77,7 +77,7 @@ def test_read_example2(data_dir: Path):
     assert items[0].seq[-5:] == "TCGAT"
 
     assert items[6].qname == "1b1b14f0-3bc2-465c-8259-053924e5cbb1"
-    assert items[6].flag == "2064"
+    assert str(items[6].flag) == "2064"
     assert items[6].seq[-5:] == "TCTGA"
 
 
@@ -118,9 +118,9 @@ def test_read_example4(data_dir: Path):
 
         item = file.read_item()
         assert item.qname == "0b3cc96a-72f6-4d1e-a4ab-a43fa4993d34"
-        assert item.flag == "0"
+        assert str(item.flag) == "0"
         assert item.rname == "2"
-        assert item.pos == "1056"
+        assert item.pos == 1056
         assert item.mapq == "60"
         assert item.cigar[:5] == "50M1D"
         assert item.cigar[-5:] == "1I38M"
