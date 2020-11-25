@@ -127,6 +127,9 @@ class SAMFlag:
     def __str__(self):
         return str(self._flag)
 
+    def __repr__(self):
+        return str(self._fag)
+
 
 @dataclasses.dataclass
 class SAMItem:
