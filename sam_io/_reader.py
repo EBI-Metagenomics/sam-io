@@ -77,6 +77,10 @@ class SAMFlag:
         self._flag = flag
 
     @property
+    def value(self) -> int:
+        return self._flag
+
+    @property
     def read_paired(self) -> bool:
         return self._flag & 0x001 != 0
 
@@ -128,7 +132,7 @@ class SAMFlag:
         return str(self._flag)
 
     def __repr__(self):
-        return str(self._fag)
+        return str(self._flag)
 
 
 @dataclasses.dataclass
